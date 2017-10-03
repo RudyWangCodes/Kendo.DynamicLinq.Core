@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.16
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{880A8E7D-B9B6-45AA-848A-288BE9DFADDF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C5B4F779-4371-4237-9697-1D0127D7B8F0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kendo.DynamicLinq.ConsoleTests", "src\Kendo.DynamicLinq.ConsoleTests\Kendo.DynamicLinq.ConsoleTests.csproj", "{75F095F4-02FB-450F-8117-8142D2590A9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kendo.DynamicLinq.Core", "src\Kendo.DynamicLinq.Core\Kendo.DynamicLinq.Core.csproj", "{E3207001-5CA6-46A3-9EBB-48D7F9F0B842}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{75F095F4-02FB-450F-8117-8142D2590A9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75F095F4-02FB-450F-8117-8142D2590A9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75F095F4-02FB-450F-8117-8142D2590A9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75F095F4-02FB-450F-8117-8142D2590A9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3207001-5CA6-46A3-9EBB-48D7F9F0B842}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3207001-5CA6-46A3-9EBB-48D7F9F0B842}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3207001-5CA6-46A3-9EBB-48D7F9F0B842}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3207001-5CA6-46A3-9EBB-48D7F9F0B842}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{75F095F4-02FB-450F-8117-8142D2590A9D} = {880A8E7D-B9B6-45AA-848A-288BE9DFADDF}
+		{E3207001-5CA6-46A3-9EBB-48D7F9F0B842} = {880A8E7D-B9B6-45AA-848A-288BE9DFADDF}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BC9DDD44-4EE2-431E-863D-4599E74C1E33}
+	EndGlobalSection
+EndGlobal
