@@ -24,41 +24,41 @@ namespace Kendo.DynamicLinq
         public static DataSourceResult ToDataSourceResult<T>(this IQueryable<T> queryable, int take, int skip, IEnumerable<Sort> sort, Filter filter, IEnumerable<Aggregator> aggregates, IEnumerable<Group> group)
         {
             //the way this extension works it pages the records using skip and take in order to do that we need at least one sorted property
-            if ((sort != null) && !sort.Any())
-            {
-                var elementType = queryable.ElementType;
-                var properties = elementType.GetProperties().ToList();
-                //by default make dir desc
-                var sortByObject = new Sort
-                {
-                    Dir = "desc"
-                };
-                PropertyInfo propertyInfo;
-                //look for property that is called id
-                if (properties.Any(p => p.Name.ToLower() == "id"))
-                {
-                    propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower() == "id");
-                }
-                //or contains id
-                else if (properties.Any(p => p.Name.ToLower().Contains("id")))
-                {
-                    propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower().Contains("id"));
-                }
-                //or just get the first property
-                else
-                {
-                    propertyInfo = properties.FirstOrDefault();
-                }
-                if (propertyInfo != null)
-                {
-                    sortByObject.Field = propertyInfo.Name;
-                }
-                sort = new List<Sort> { sortByObject };
-            }
-            else
-            {
-                sort = new List<Sort>();
-            }
+            //if ((sort != null) && !sort.Any())
+            //{
+            //    var elementType = queryable.ElementType;
+            //    var properties = elementType.GetProperties().ToList();
+            //    //by default make dir desc
+            //    var sortByObject = new Sort
+            //    {
+            //        Dir = "desc"
+            //    };
+            //    PropertyInfo propertyInfo;
+            //    //look for property that is called id
+            //    if (properties.Any(p => p.Name.ToLower() == "id"))
+            //    {
+            //        propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower() == "id");
+            //    }
+            //    //or contains id
+            //    else if (properties.Any(p => p.Name.ToLower().Contains("id")))
+            //    {
+            //        propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower().Contains("id"));
+            //    }
+            //    //or just get the first property
+            //    else
+            //    {
+            //        propertyInfo = properties.FirstOrDefault();
+            //    }
+            //    if (propertyInfo != null)
+            //    {
+            //        sortByObject.Field = propertyInfo.Name;
+            //    }
+            //    sort = new List<Sort> { sortByObject };
+            //}
+            //else
+            //{
+            //    sort = new List<Sort>();
+            //}
 
             // Filter the data first
             queryable = Filter(queryable, filter);
