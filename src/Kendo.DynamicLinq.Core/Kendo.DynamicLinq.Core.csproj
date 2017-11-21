@@ -5,6 +5,7 @@
     <Authors>Rudy Wang</Authors>
     <Company>GTASS</Company>
     <Description>This libray is fork from https://github.com/linmasaki/Kendo.DynamicLinqCore</Description>
+    <Version>1.0.1</Version
   </PropertyGroup>
 
   <ItemGroup>
