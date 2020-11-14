@@ -11,26 +11,33 @@ namespace Kendo.DynamicLinq.ConsoleTests
         {
             var people = new[]
             {
-                new Person { Age = 40 },
-                new Person { Age = 25 },
-                new Person { Age = 4 },
-                new Person { Age = 20 }
+                new Person { Name = "John Doe", Age = 40 },
+                new Person { Name = "Mary Jane", Age = 25 },
+                new Person { Name = "Bruce Lee", Age = 4 },
+                new Person { Name = "Mickey Winsley", Age = 20 }
             };
 
             var sort = new List<Sort> { new Sort { Field = "age", Dir = "asc"} };
-
-            var result = people.AsQueryable().ToDataSourceResult(10, 0, sort, null, new[]
+            var filter = new Filter
             {
-                new Aggregator
-                {
-                    Aggregate = "sum",
-                    Field = "Age"
-                }
-            }, null);
+                Logic = "and",
+                Filters = new List<Filter> { new Filter { Field = "name", Operator = "contains", Value = "LEE" } }
+            };
+
+            //var result = people.AsQueryable().ToDataSourceResult(10, 0, sort, null, new[]
+            //{
+            //    new Aggregator
+            //    {
+            //        Aggregate = "sum",
+            //        Field = "Age"
+            //    }
+            //}, filter);
+
+            var result = people.AsQueryable().ToDataSourceResult(10, 0, sort, filter);
 
             foreach (Person item in result.Data)
             {
-                Console.WriteLine(item.Age);
+                Console.WriteLine(item.Name + ", " + item.Age);
             }
             //Console.Write(result.Aggregates);
             Console.ReadKey();
@@ -40,6 +47,8 @@ namespace Kendo.DynamicLinq.ConsoleTests
     [KnownType(typeof(Person))]
     public class Person
     {
+        public string Name { get; set; }
+
         public int Age { get; set; }
     }
 }

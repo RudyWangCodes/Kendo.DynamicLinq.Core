@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 
 namespace Kendo.DynamicLinq
@@ -44,7 +45,7 @@ namespace Kendo.DynamicLinq
         /// <summary>
         /// Mapping of Kendo DataSource filtering operators to Dynamic Linq
         /// </summary>
-        private static readonly IDictionary<string, string> operators = new Dictionary<string, string>
+        private static readonly IDictionary<string, string> Operators = new Dictionary<string, string>
         {
             {"eq", "="},
             {"neq", "!="},
@@ -52,14 +53,16 @@ namespace Kendo.DynamicLinq
             {"lte", "<="},
             {"gt", ">"},
             {"gte", ">="},
-            {"isnull", "="},
-            {"isnotnull", "!="},
             {"startswith", "StartsWith"},
             {"endswith", "EndsWith"},
             {"contains", "Contains"},
             {"doesnotcontain", "Contains"},
             {"isempty", ""},
-            {"isnotempty", "!" }
+            {"isnotempty", "!" },
+            {"isnull", "="},
+            {"isnotnull", "!="},
+            {"isnullorempty", ""},
+            {"isnotnullorempty", "!"}
         };
 
         /// <summary>
@@ -76,7 +79,7 @@ namespace Kendo.DynamicLinq
         {
             if (Filters != null && Filters.Any())
             {
-                foreach (Filter filter in Filters)
+                foreach (var filter in Filters)
                 {
                     filters.Add(filter);
                     filter.Collect(filters);
@@ -92,37 +95,38 @@ namespace Kendo.DynamicLinq
         /// Converts the filter expression to a predicate suitable for Dynamic Linq e.g. "Field1 = @1 and Field2.Contains(@2)"
         /// </summary>
         /// <param name="filters">A list of flattened filters.</param>
-        public string ToExpression(IList<Filter> filters)
+        public string ToExpression(Type type, IList<Filter> filters)
         {
             if (Filters != null && Filters.Any())
             {
-                return "(" + String.Join(" " + Logic + " ", Filters.Select(filter => filter.ToExpression(filters)).ToArray()) + ")";
+                return "(" + string.Join(" " + Logic + " ", Filters.Select(filter => filter.ToExpression(type, filters)).ToArray()) + ")";
             }
 
             int index = filters.IndexOf(this);
-            string comparison = operators[Operator];
+            var comparison = Operators[Operator];
 
-            if (Operator == "doesnotcontain")
+            var typeProperties = type.GetRuntimeProperties();
+            var currentPropertyType = typeProperties.FirstOrDefault(f => f.Name.Equals(Field, StringComparison.OrdinalIgnoreCase))?.PropertyType;
+            
+            switch (Operator)
             {
-                return String.Format("!{0}.{1}(@{2})", Field, comparison, index);
-            }
-
-            if (Operator == "isnotnull" || Operator == "isnull")
-            {
-                return String.Format("{0} {1} null", Field, comparison);
-            }
-
-            if (Operator == "isempty" || Operator == "isnotempty")
-            {
-                return String.Format("{1}string.IsNullOrEmpty({0})", Field, comparison);
+                case "doesnotcontain" when currentPropertyType == typeof(string):
+                    return $"!{Field}.ToLower().{comparison}(@{index})";
+                case "doesnotcontain":
+                    return $"({Field} != null && !{Field}.ToString().ToLower().{comparison}(@{index}))";
+                case "isnull":
+                case "isnotnull":
+                    throw new NotSupportedException($"Operator {Operator} not support non-string type");
             }
 
             if (comparison == "StartsWith" || comparison == "EndsWith" || comparison == "Contains")
             {
-                return String.Format("{0}.{1}(@{2})", Field, comparison, index);
+                return currentPropertyType == typeof(string)
+                    ? $"{Field}.ToLower().{comparison}(@{index})"
+                    : $"({Field} != null && {Field}.ToString().ToLower().{comparison}(@{index}))";
             }
 
-            return String.Format("{0} {1} @{2}", Field, comparison, index);
+            return $"{Field} {comparison} @{index}";
         }
     }
 }

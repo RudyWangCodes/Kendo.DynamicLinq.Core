@@ -10,6 +10,33 @@ namespace Kendo.DynamicLinq
     public static class QueryableExtensions
     {
         /// <summary>
+        /// Applies data processing (paging, sorting and filtering) over IQueryable using Dynamic Linq.
+        /// </summary>
+        /// <typeparam name="T">The type of the IQueryable.</typeparam>
+        /// <param name="queryable">The IQueryable which should be processed.</param>
+        /// <param name="take">Specifies how many items to take. Configurable via the pageSize setting of the Kendo DataSource.</param>
+        /// <param name="skip">Specifies how many items to skip.</param>
+        /// <param name="sort">Specifies the current sort order.</param>
+        /// <param name="filter">Specifies the current filter.</param>
+        /// <returns>A DataSourceResult object populated from the processed IQueryable.</returns>
+        public static DataSourceResult ToDataSourceResult<T>(this IQueryable<T> queryable, int take, int skip, IEnumerable<Sort> sort, Filter filter)
+        {
+            return queryable.ToDataSourceResult(take, skip, sort, filter, null, null);
+        }
+        
+        /// <summary>
+        ///  Applies data processing (paging, sorting and filtering) over IQueryable using Dynamic Linq.
+        /// </summary>
+        /// <typeparam name="T">The type of the IQueryable.</typeparam>
+        /// <param name="queryable">The IQueryable which should be processed.</param>
+        /// <param name="request">The DataSourceRequest object containing take, skip, order, and filter data.</param>
+        /// <returns>A DataSourceResult object populated from the processed IQueryable.</returns>
+        public static DataSourceResult ToDataSourceResult<T>(this IQueryable<T> queryable, DataSourceRequest request)
+        {
+            return queryable.ToDataSourceResult(request.Take, request.Skip, request.Sort, request.Filter, null, request.Group);
+        }
+        
+        /// <summary>
         /// Applies data processing (paging, sorting, filtering and aggregates) over IQueryable using Dynamic Linq.
         /// </summary>
         /// <typeparam name="T">The type of the IQueryable.</typeparam>
@@ -23,54 +50,22 @@ namespace Kendo.DynamicLinq
         /// <returns>A DataSourceResult object populated from the processed IQueryable.</returns>
         public static DataSourceResult ToDataSourceResult<T>(this IQueryable<T> queryable, int take, int skip, IEnumerable<Sort> sort, Filter filter, IEnumerable<Aggregator> aggregates, IEnumerable<Group> group)
         {
-            //the way this extension works it pages the records using skip and take in order to do that we need at least one sorted property
-            //if ((sort != null) && !sort.Any())
-            //{
-            //    var elementType = queryable.ElementType;
-            //    var properties = elementType.GetProperties().ToList();
-            //    //by default make dir desc
-            //    var sortByObject = new Sort
-            //    {
-            //        Dir = "desc"
-            //    };
-            //    PropertyInfo propertyInfo;
-            //    //look for property that is called id
-            //    if (properties.Any(p => p.Name.ToLower() == "id"))
-            //    {
-            //        propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower() == "id");
-            //    }
-            //    //or contains id
-            //    else if (properties.Any(p => p.Name.ToLower().Contains("id")))
-            //    {
-            //        propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower().Contains("id"));
-            //    }
-            //    //or just get the first property
-            //    else
-            //    {
-            //        propertyInfo = properties.FirstOrDefault();
-            //    }
-            //    if (propertyInfo != null)
-            //    {
-            //        sortByObject.Field = propertyInfo.Name;
-            //    }
-            //    sort = new List<Sort> { sortByObject };
-            //}
-            //else
-            //{
-            //    sort = new List<Sort>();
-            //}
+            var errors = new List<object>();
 
             // Filter the data first
-            queryable = Filter(queryable, filter);
+            queryable = Filter(queryable, filter, errors);
 
-            // Calculate the total number of records (needed for paging)
+            // Calculate the total number of records (needed for paging)            
             var total = queryable.Count();
 
             // Calculate the aggregates
             var aggregate = Aggregate(queryable, aggregates);
 
-            if ((group != null) && group.Any())
+            if (group != null && group.Any())
             {
+                //if(sort == null) sort = GetDefaultSort(queryable.ElementType, sort);
+                if(sort == null) sort = new List<Sort>();
+                
                 foreach (var source in group.Reverse())
                 {
                     sort = sort.Append(new Sort
@@ -87,7 +82,7 @@ namespace Kendo.DynamicLinq
             // Finally page the data
             if (take > 0)
             {
-                queryable = Page(queryable, take, skip, sort.Any());
+                queryable = Page(queryable, take, skip);
             }
 
             var result = new DataSourceResult
@@ -106,145 +101,44 @@ namespace Kendo.DynamicLinq
             {
                 result.Data = queryable.ToList();
             }
+
+            // Set errors if any
+            if (errors.Any())
+            {
+                result.Errors = errors;
+            }
+
             return result;
         }
-
-        /// <summary>
-        /// Applies data processing (paging, sorting and filtering) over IQueryable using Dynamic Linq.
-        /// </summary>
-        /// <typeparam name="T">The type of the IQueryable.</typeparam>
-        /// <param name="queryable">The IQueryable which should be processed.</param>
-        /// <param name="take">Specifies how many items to take. Configurable via the pageSize setting of the Kendo DataSource.</param>
-        /// <param name="skip">Specifies how many items to skip.</param>
-        /// <param name="sort">Specifies the current sort order.</param>
-        /// <param name="filter">Specifies the current filter.</param>
-        /// <returns>A DataSourceResult object populated from the processed IQueryable.</returns>
-        public static DataSourceResult ToDataSourceResult<T>(this IQueryable<T> queryable, int take, int skip, IEnumerable<Sort> sort, Filter filter)
-        {
-            return queryable.ToDataSourceResult(take, skip, sort, filter, null, null);
-        }
-
-        /// <summary>
-        ///  Applies data processing (paging, sorting and filtering) over IQueryable using Dynamic Linq.
-        /// </summary>
-        /// <typeparam name="T">The type of the IQueryable.</typeparam>
-        /// <param name="queryable">The IQueryable which should be processed.</param>
-        /// <param name="request">The DataSourceRequest object containing take, skip, order, and filter data.</param>
-        /// <returns>A DataSourceResult object populated from the processed IQueryable.</returns>
-	    public static DataSourceResult ToDataSourceResult<T>(this IQueryable<T> queryable, DataSourceRequest request)
-        {
-            return queryable.ToDataSourceResult(request.Take, request.Skip, request.Sort, request.Filter, null, request.Group);
-        }
-
-        public static IEnumerable<T> Append<T>(this IEnumerable<T> source, T item)
-        {
-            foreach (var i in source)
-            {
-                yield return i;
-            }
-
-            yield return item;
-        }
-
-        public static IEnumerable<T> Prepend<T>(this IEnumerable<T> source, T item)
-        {
-            yield return item;
-
-            foreach (T i in source)
-            {
-                yield return i;
-            }
-        }
-
-        private static IQueryable<T> Filter<T>(IQueryable<T> queryable, Filter filter)
+        
+        private static IQueryable<T> Filter<T>(IQueryable<T> queryable, Filter filter, List<object> errors)
         {
             if ((filter != null) && (filter.Logic != null))
             {
+                // Pretreatment some work
+                filter = PreliminaryWork(filter);
+                
                 // Collect a flat list of all filters
-                var filters = filter.All();
+                var filters = filter.All().Distinct().ToList();
 
                 // Get all filter values as array (needed by the Where method of Dynamic Linq)
-                var values = filters.Select(f => f.Value is string ? f.Value.ToString().ToLower() : f.Value).ToArray();
-
-                ////Add toLower() for all filter Fields with type of string in the values 
-                for (var i = 0; i < values.Length; i++)
-                {
-                    if (values[i] is string)
-                    {
-                        filters[i].Field = string.Format("{0}.ToString().ToLower()", filters[i].Field);
-                    }
-
-                    // when we have a decimal value it gets converted to double and the query will break
-                    if (values[i] is double)
-                    {
-                        values[i] = Convert.ToDecimal(values[i]);
-                    }
-
-                    if (values[i] is DateTime)
-                    {
-                        var dateTimeFilterValue = (DateTime)values[i];
-                        values[i] = new DateTime(dateTimeFilterValue.Year, dateTimeFilterValue.Month, dateTimeFilterValue.Day, 0, 0, 0);
-                    }
-                }
-
-                var valuesList = values.ToList();
-
-                //Remove duplicate filters
-                //NOTE: we loop, and don't use .distinct for a reason!
-                //There is a miniscule chance different columns will filter by the same value, in which case using distinct will remove too many filters
-                for (var i = filters.Count - 1; i >= 0; i--)
-                {
-                    var previousFilter = filters.ElementAtOrDefault(i - 1);
-
-                    if ((previousFilter != null) && filters[i].Equals(previousFilter))
-                    {
-                        filters.RemoveAt(i);
-                        valuesList.RemoveAt(i);
-                    }
-                }
-
-                var filtersList = filters.ToList();
-                for (var i = 0; i < filters.Count; i++)
-                {
-                    if (filters[i].Value is DateTime && (filters[i].Operator == "eq"))
-                    {
-                        var filterToEdit = filtersList[i];
-
-                        //Copy the date from the filter
-                        var baseDate = ((DateTime)filters[i].Value).Date;
-
-                        //Instead of comparing for exact equality, we compare as greater than the start of the day...
-                        filterToEdit.Value = new DateTime(baseDate.Year, baseDate.Month, baseDate.Day, 0, 0, 0);
-                        filterToEdit.Operator = "gte";
-                        valuesList[i] = filterToEdit.Value;
-
-                        //...and less than the end of that same day (we're making an additional filter here)
-                        var newFilter = new Filter
-                        {
-                            Value = new DateTime(baseDate.Year, baseDate.Month, baseDate.Day, 23, 59, 59),
-                            Field = filters[i].Field,
-                            Filters = filters[i].Filters,
-                            Operator = "lte",
-                            Logic = "and"
-                        };
-
-                        //Add that additional filter to the list of filters
-                        filtersList.Add(newFilter);
-                        valuesList.Add(newFilter.Value);
-                    }
-                }
-
-                values = valuesList.ToArray();
-                filters = filtersList;
-
-                //Set the filters, since we may have editted them
-                filter.Filters = filtersList;
+                var values = filters.Select(f => f.Value).ToArray();
 
                 // Create a predicate expression e.g. Field1 = @0 And Field2 > @1
-                var predicate = filter.ToExpression(filters);
+                string predicate;
+                try
+                {
+                    // Create a predicate expression e.g. Field1 = @0 And Field2 > @1
+                    predicate = filter.ToExpression(typeof(T), filters);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(ex.Message);
+                    return queryable;
+                }
 
                 // Use the Where method of Dynamic Linq to filter the data
-                queryable = queryable.Where(predicate, values);
+                queryable = queryable.Where(predicate, values); 
             }
 
             return queryable;
@@ -277,6 +171,7 @@ namespace Kendo.DynamicLinq
 
                         fieldProps.Add(new DynamicProperty(aggregate.Aggregate, typeof(object)), val);
                     }
+                    
                     type = DynamicClassFactory.CreateType(fieldProps.Keys.ToList());
                     var fieldObj = Activator.CreateInstance(type);
                     foreach (var p in fieldProps.Keys)
@@ -306,7 +201,7 @@ namespace Kendo.DynamicLinq
             if (sort != null && sort.Any())
             {
                 // Create ordering expression e.g. Field1 asc, Field2 desc
-                var ordering = string.Join(",", sort.Reverse().Select(s => s.ToExpression()));
+                var ordering = string.Join(",", sort.Select(s => s.ToExpression()));
 
                 // Use the OrderBy method of Dynamic Linq to sort the data
                 return queryable.OrderBy(ordering);
@@ -315,13 +210,123 @@ namespace Kendo.DynamicLinq
             return queryable;
         }
 
-        private static IQueryable<T> Page<T>(IQueryable<T> queryable, int take, int skip, bool sorted)
+        private static IQueryable<T> Page<T>(IQueryable<T> queryable, int take, int skip)
+        {            
+            return queryable.Skip(skip).Take(take); 
+        }
+
+        /// <summary>
+        /// Pretreatment of specific datetime condition and disallowed value type 
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        private static Filter PreliminaryWork(Filter filter)
         {
-            if (sorted)
+            if (filter.Filters != null && filter.Logic != null)
             {
-                return queryable.Skip(skip).Take(take);
+                var newFilters = new List<Filter>();
+                foreach (var f in filter.Filters)
+                {
+                    newFilters.Add(PreliminaryWork(f));
+                }
+
+                filter.Filters = newFilters;
             }
-            return queryable.Take(take);
+            
+            // Used when the datetime's operator value is eq and local time is 00:00:00 
+            if (filter.Value is DateTime utcTime && filter.Operator == "eq")
+            {
+                // Copy the time from the filter
+                var localTime = utcTime.ToLocalTime();
+                if (localTime.Hour != 0 || localTime.Minute != 0 || localTime.Second != 0) 
+                    return filter;
+                
+                var newFilter = new Filter { Logic = "and"};
+                var filtersList = new List<Filter>
+                {
+                    // Instead of comparing for exact equality, we compare as greater than the start of the day...
+                    new Filter
+                    {
+                        Field = filter.Field,
+                        Filters = filter.Filters,
+                        Value = new DateTime(localTime.Year, localTime.Month, localTime.Day, 0, 0, 0),  
+                        Operator = "gte"
+                    },
+                    // ...and less than the end of that same day (we're making an additional filter here)
+                    new Filter
+                    {
+                        Field = filter.Field,
+                        Filters = filter.Filters,
+                        Value = new DateTime(localTime.Year, localTime.Month, localTime.Day, 23, 59, 59),  
+                        Operator = "lte"
+                    }
+                };
+
+                newFilter.Filters = filtersList;
+                    
+                return newFilter;
+            }
+
+            switch (filter.Value)
+            {
+                // Convert datetime to local 
+                case DateTime utcTime2:
+                    var localTime = utcTime2.ToLocalTime();
+                    filter.Value = new DateTime(localTime.Year, localTime.Month, localTime.Day, localTime.Hour, localTime.Minute, localTime.Second, localTime.Millisecond);
+                    break;
+                // When we have a decimal value it gets converted to double and the query will break
+                case double _:
+                    filter.Value = Convert.ToDecimal(filter.Value);
+                    break;
+                // Default to lower case
+                case string _:
+                    filter.Value = filter.Value.ToString().ToLower();
+                    break;
+            }
+
+            return filter;
+        }
+        
+        /// <summary>
+        /// The way this extension works it pages the records using skip and take in order to do that we need at least one sorted property.
+        /// </summary>
+        private static IEnumerable<Sort> GetDefaultSort(Type type, IEnumerable<Sort> sort)
+        {
+            if (sort == null)
+            {
+                var elementType = type;
+                var properties = elementType.GetProperties().ToList();
+                
+                //by default make dir desc
+                var sortByObject = new Sort
+                {
+                    Dir = "desc"
+                };
+
+                PropertyInfo propertyInfo;                
+                //look for property that is called id
+                if (properties.Any(p => p.Name.ToLower() == "id"))
+                {
+                    propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower() == "id");
+                }
+                //or contains id
+                else if (properties.Any(p => p.Name.ToLower().Contains("id")))
+                {
+                    propertyInfo = properties.FirstOrDefault(p => p.Name.ToLower().Contains("id"));
+                }
+                //or just get the first property
+                else
+                {
+                    propertyInfo = properties.FirstOrDefault();
+                }
+                if (propertyInfo != null)
+                {
+                    sortByObject.Field = propertyInfo.Name;
+                }
+                sort = new List<Sort> { sortByObject };
+            }
+
+            return sort;
         }
     }
 }
